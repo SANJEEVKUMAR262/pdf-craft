@@ -9,7 +9,13 @@ const app = express();
 const port = 3000;
 
 app.use(express.json());
-app.use(express.static('public'));
+// Absolute path routing for static frontend deployment
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Fallback route to serve index.html for any root requests
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Store uploaded files temporarily in system memory as Buffers
 const storage = multer.memoryStorage();
