@@ -8,14 +8,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let selectedFile = null;
 
-    // Trigger explicit browsing window on wrapper click
     dropZone.addEventListener('click', () => fileInput.click());
 
     fileInput.addEventListener('change', (e) => {
         handleFileSelection(e.target.files[0]);
     });
 
-    // Drag and drop event orchestration mapping
     ['dragenter', 'dragover'].forEach(eventName => {
         dropZone.addEventListener(eventName, (e) => {
             e.preventDefault();
@@ -44,7 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Dynamic row generation injection pipeline block
     addRangeBtn.addEventListener('click', () => {
         const rowWrapper = document.createElement('div');
         rowWrapper.className = 'flex items-center space-x-2 transform scale-95 opacity-0 transition-all duration-200 ease-out';
@@ -57,7 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         rangesContainer.appendChild(rowWrapper);
         
-        // Trigger micro-animation entry sequence frames
         setTimeout(() => {
             rowWrapper.classList.remove('scale-95', 'opacity-0');
         }, 10);
@@ -68,7 +64,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Form pipeline submission tracking architecture 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -80,7 +75,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData();
         formData.append('pdfFile', selectedFile);
 
-        // Collect string values across all dynamic text rows
         const rangeInputs = document.querySelectorAll('input[name="rangeInput"]');
         let configurationAdded = false;
 
@@ -108,7 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(errPayload.error || 'Server pipeline compiling error.');
             }
 
-            // Capture raw output archive payload blob
             const zipBlob = await response.blob();
             const downloadUrl = window.URL.createObjectURL(zipBlob);
             
@@ -119,7 +112,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.appendChild(linkNode);
             linkNode.click();
             
-            // Garbage collection stream freeing operations
             linkNode.remove();
             window.URL.revokeObjectURL(downloadUrl);
 
