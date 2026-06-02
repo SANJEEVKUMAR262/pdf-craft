@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const addRangeBtn = document.getElementById('addRangeBtn');
     const rangesContainer = document.getElementById('rangesContainer');
     const form = document.getElementById('uploadForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const btnText = document.getElementById('btnText');
 
     let selectedFile = null;
 
@@ -91,6 +93,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // --- ACTIVATE LOADING FEEDBACK LOCK ---
+        submitBtn.disabled = true;
+        btnText.innerHTML = `<span class="inline-block animate-spin mr-2">⏳</span> Crafting & Compiling Archive Bundle... Please Wait.`;
+
         try {
             const response = await fetch('/api/splice', {
                 method: 'POST',
@@ -117,6 +123,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             alert(error.message);
+        } finally {
+            // --- DEACTIVATE LOADING LOCK AND RESET INTERFACE ---
+            submitBtn.disabled = false;
+            btnText.innerText = "Compile & Download Package Bundle (.ZIP)";
         }
     });
 });
