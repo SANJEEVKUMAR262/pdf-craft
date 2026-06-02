@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('uploadForm');
     const submitBtn = document.getElementById('submitBtn');
     const btnText = document.getElementById('btnText');
+    const loadingSpinner = document.getElementById('loadingSpinner');
 
     let selectedFile = null;
 
@@ -74,11 +75,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const formData = new FormData();
-        formData.append('pdfFile', selectedFile);
-
         const rangeInputs = document.querySelectorAll('input[name="rangeInput"]');
         let configurationAdded = false;
+        const formData = new FormData();
+        formData.append('pdfFile', selectedFile);
 
         rangeInputs.forEach(input => {
             const val = input.value.trim();
@@ -93,9 +93,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // --- ACTIVATE LOADING FEEDBACK LOCK ---
+        // 🛑 ACTIVATE LOADING STATE LOCK IMMEDIATELY
         submitBtn.disabled = true;
-        btnText.innerHTML = `<span class="inline-block animate-spin mr-2">⏳</span> Crafting & Compiling Archive Bundle... Please Wait.`;
+        loadingSpinner.classList.remove('hidden');
+        btnText.innerText = "Processing & Compiling Archive... Please Wait";
 
         try {
             const response = await fetch('/api/splice', {
@@ -124,8 +125,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             alert(error.message);
         } finally {
-            // --- DEACTIVATE LOADING LOCK AND RESET INTERFACE ---
+            // ✅ DEACTIVATE LOADING STATE LOCK AND RESET
             submitBtn.disabled = false;
+            loadingSpinner.classList.add('hidden');
             btnText.innerText = "Compile & Download Package Bundle (.ZIP)";
         }
     });
