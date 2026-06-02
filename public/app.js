@@ -1,114 +1,130 @@
-const fileInput = document.getElementById('fileInput');
-const dropzone = document.getElementById('dropzone');
-const fileList = document.getElementById('fileList');
-const emptyMessage = document.getElementById('emptyMessage');
-const processBtn = document.getElementById('processBtn');
+document.addEventListener('DOMContentLoaded', () => {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileDetails = document.getElementById('fileDetails');
+    const addRangeBtn = document.getElementById('addRangeBtn');
+    const rangesContainer = document.getElementById('rangesContainer');
+    const form = document.getElementById('uploadForm');
 
-let selectedFiles = [];
+    let selectedFile = null;
 
-dropzone.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', handleFileSelection);
+    // Trigger explicit browsing window on wrapper click
+    dropZone.addEventListener('click', () => fileInput.click());
 
-dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('border-indigo-500'); });
-dropzone.addEventListener('dragleave', () => dropzone.classList.remove('border-indigo-500'));
-dropzone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropzone.classList.remove('border-indigo-500');
-    if (e.dataTransfer.files.length > 0) {
-        handleFileSelection({ target: { files: e.dataTransfer.files } });
-    }
-});
-
-function handleFileSelection(e) {
-    const files = Array.from(e.target.files).filter(file => file.type === "application/pdf");
-    
-    files.forEach(file => {
-        selectedFiles.push({
-            fileObj: file,
-            id: Date.now() + Math.random().toString(36).substr(2, 5)
-        });
+    fileInput.addEventListener('change', (e) => {
+        handleFileSelection(e.target.files[0]);
     });
-    
-    renderQueue();
-}
 
-window.removeFile = function(id) {
-    selectedFiles = selectedFiles.filter(item => item.id !== id);
-    renderQueue();
-}
+    // Drag and drop event orchestration mapping
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        }, false);
+    });
 
-function renderQueue() {
-    fileList.innerHTML = '';
-    
-    if (selectedFiles.length === 0) {
-        emptyMessage.classList.remove('hidden');
-        fileList.appendChild(emptyMessage);
-        processBtn.classList.add('hidden');
-        return;
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+        }, false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        handleFileSelection(dt.files[0]);
+    });
+
+    function handleFileSelection(file) {
+        if (file && file.type === 'application/pdf') {
+            selectedFile = file;
+            fileDetails.innerHTML = `Selected: <span class="text-green-400 font-semibold">${file.name}</span> (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
+        } else {
+            alert('Invalid file structure. Please submit a valid PDF.');
+        }
     }
-    
-    emptyMessage.classList.add('hidden');
-    processBtn.classList.remove('hidden');
 
-    selectedFiles.forEach((item, index) => {
-        const row = document.createElement('div');
-        row.className = "flex flex-col md:flex-row md:items-center justify-between p-4 bg-slate-800 border border-slate-700 rounded-xl space-y-3 md:space-y-0";
-        row.innerHTML = `
-            <div class="flex items-center space-x-3 overflow-hidden">
-                <span class="bg-indigo-900 text-indigo-300 font-mono text-xs px-2 py-1 rounded">#${index + 1}</span>
-                <p class="text-sm font-medium text-slate-200 truncate max-w-xs">${item.fileObj.name}</p>
-                <p class="text-xs text-slate-500">(${(item.fileObj.size / (1024 * 1024)).toFixed(2)} MB)</p>
-            </div>
-            <div class="flex items-center space-x-2">
-                <input type="text" id="range-${item.id}" placeholder="e.g., 1-5, 20-50, 60-170" 
-                       class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 w-48 placeholder-slate-600" />
-                <button onclick="removeFile('${item.id}')" class="text-rose-400 hover:text-rose-300 text-sm font-semibold px-2 py-1.5">
-                    Remove
-                </button>
-            </div>
+    // Dynamic row generation injection pipeline block
+    addRangeBtn.addEventListener('click', () => {
+        const rowWrapper = document.createElement('div');
+        rowWrapper.className = 'flex items-center space-x-2 transform scale-95 opacity-0 transition-all duration-200 ease-out';
+        
+        rowWrapper.innerHTML = `
+            <input type="text" name="rangeInput" required placeholder="e.g. 5-8" 
+                   class="flex-1 bg-gray-700 text-white placeholder-gray-500 rounded-lg px-4 py-2.5 outline-none border border-gray-600 focus:border-blue-500 transition">
+            <button type="button" class="remove-row-btn text-red-400 hover:text-red-300 px-2 text-xl font-bold transition focus:outline-none">✕</button>
         `;
-        fileList.appendChild(row);
-    });
-}
+        
+        rangesContainer.appendChild(rowWrapper);
+        
+        // Trigger micro-animation entry sequence frames
+        setTimeout(() => {
+            rowWrapper.classList.remove('scale-95', 'opacity-0');
+        }, 10);
 
-processBtn.addEventListener('click', async () => {
-    processBtn.disabled = true;
-    processBtn.innerText = "Processing Document...";
-
-    const formData = new FormData();
-    const configs = [];
-
-    selectedFiles.forEach(item => {
-        formData.append('pdfs', item.fileObj);
-        const rangeValue = document.getElementById(`range-${item.id}`).value;
-        configs.push({ range: rangeValue });
+        rowWrapper.querySelector('.remove-row-btn').addEventListener('click', () => {
+            rowWrapper.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => rowWrapper.remove(), 200);
+        });
     });
 
-    formData.append('configs', JSON.stringify(configs));
+    // Form pipeline submission tracking architecture 
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
 
-    try {
-        const response = await fetch('/api/process-pdf', {
-            method: 'POST',
-            body: formData
+        if (!selectedFile) {
+            alert('Please select or drop a valid source PDF document first.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('pdfFile', selectedFile);
+
+        // Collect string values across all dynamic text rows
+        const rangeInputs = document.querySelectorAll('input[name="rangeInput"]');
+        let configurationAdded = false;
+
+        rangeInputs.forEach(input => {
+            const val = input.value.trim();
+            if (val) {
+                formData.append('ranges', val);
+                configurationAdded = true;
+            }
         });
 
-        if (!response.ok) throw new Error("Compilation failed");
+        if (!configurationAdded) {
+            alert('Please supply at least one parsing range value configuration entry.');
+            return;
+        }
 
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `crafted_${Date.now()}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
+        try {
+            const response = await fetch('/api/splice', {
+                method: 'POST',
+                body: formData
+            });
 
-    } catch (error) {
-        console.error(error);
-        alert("An error occurred during compilation. Please double check your page range formats.");
-    } finally {
-        processBtn.disabled = false;
-        processBtn.innerText = "Compile & Download PDF";
-    }
+            if (!response.ok) {
+                const errPayload = await response.json();
+                throw new Error(errPayload.error || 'Server pipeline compiling error.');
+            }
+
+            // Capture raw output archive payload blob
+            const zipBlob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(zipBlob);
+            
+            const linkNode = document.createElement('a');
+            linkNode.href = downloadUrl;
+            linkNode.download = 'crafted_pdfs_package.zip';
+            
+            document.body.appendChild(linkNode);
+            linkNode.click();
+            
+            // Garbage collection stream freeing operations
+            linkNode.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+
+        } catch (error) {
+            alert(error.message);
+        }
+    });
 });
