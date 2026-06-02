@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Craft - Split & Merge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col items-center py-10">
+
+    <main class="w-full max-w-3xl px-4">
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl font-extrabold text-indigo-400 tracking-tight">PDF Craft</h1>
+            <p class="text-slate-400 mt-2">Dynamic extraction, splitting, and merging tool</p>
+        </header>
+
+        <div id="dropzone" class="border-2 border-dashed border-slate-700 bg-slate-800 rounded-xl p-8 text-center cursor-pointer hover:border-indigo-500 transition-colors">
+            <input type="file" id="fileInput" multiple accept=".pdf" class="hidden" />
+            <p class="text-lg font-semibold text-slate-300">Drag & drop your PDFs here, or <span class="text-indigo-400">browse</span></p>
+            <p class="text-xs text-slate-500 mt-1">Supports uploading multiple files at once</p>
+        </div>
+
+        <section class="mt-8">
+            <h2 class="text-xl font-bold text-slate-300 mb-4">File Queue Configurations</h2>
+            <div id="fileList" class="space-y-3">
+                <p id="emptyMessage" class="text-sm text-slate-500 italic">No files selected yet.</p>
+            </div>
+        </section>
+
+        <button id="processBtn" class="w-full mt-8 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hidden">
+            Compile & Download PDF
+        </button>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
