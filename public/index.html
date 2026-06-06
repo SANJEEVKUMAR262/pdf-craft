@@ -3,60 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Craft | Multi-Splicer</title>
+    <title>PDF Craft | Multi-Splicer & Merger</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .drag-over { border-color: #3b82f6; background-color: #1e293b; }
+        .tab-active { border-bottom: 2px solid #3b82f6; color: #60a5fa; }
+        .tab-inactive { border-bottom: 2px solid transparent; color: #9ca3af; }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans min-h-screen flex items-center justify-center p-4">
-
     <div class="w-full max-w-2xl bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 p-6 md:p-8">
-        <header class="text-center mb-8">
+
+        <header class="text-center mb-6">
             <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
                 PDF Craft 🛠️
             </h1>
-            <p class="text-gray-400 text-sm mt-2">Generate multiple custom sliced files from a single PDF instantly</p>
+            <p class="text-gray-400 text-sm mt-2">Split a PDF into custom ranges, or merge multiple PDFs into one</p>
         </header>
 
-        <form id="uploadForm" class="space-y-6">
-            <div id="dropZone" class="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center cursor-pointer hover:border-gray-500 transition group">
-                <input type="file" id="fileInput" accept="application/pdf" class="hidden">
-                <div class="space-y-2">
-                    <svg class="mx-auto h-12 w-12 text-gray-400 group-hover:text-blue-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                    </svg>
-                    <p class="text-sm font-medium text-gray-300" id="fileDetails">
-                        Drag and drop your source PDF here, or <span class="text-blue-400">browse</span>
-                    </p>
-                    <p class="text-xs text-gray-500">Only supports standard .pdf files</p>
-                </div>
-            </div>
+        <!-- Tabs -->
+        <div class="flex border-b border-gray-700 mb-6">
+            <button id="tab-split" onclick="switchTab('split')"
+                class="tab-active px-6 py-2.5 text-sm font-semibold transition focus:outline-none">
+                ✂️ Split PDF
+            </button>
+            <button id="tab-merge" onclick="switchTab('merge')"
+                class="tab-inactive px-6 py-2.5 text-sm font-semibold transition focus:outline-none">
+                🔗 Merge PDFs
+            </button>
+        </div>
 
-            <div>
-                <label class="block text-gray-300 text-sm font-semibold mb-2">Target Splicing Ranges</label>
-                <div id="rangesContainer" class="space-y-3">
-                    <div class="flex items-center space-x-2">
-                        <input type="text" name="rangeInput" required placeholder="e.g. 1-4, 7, 10-12" 
-                               class="flex-1 bg-gray-700 text-white placeholder-gray-500 rounded-lg px-4 py-2.5 outline-none border border-gray-600 focus:border-blue-500 transition">
+        <!-- SPLIT PANEL -->
+        <div id="panel-split">
+            <form id="splitForm" class="space-y-6">
+                <div id="splitDropZone" class="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center cursor-pointer hover:border-gray-500 transition group">
+                    <input type="file" id="splitFileInput" accept="application/pdf" class="hidden">
+                    <div class="space-y-2">
+                        <svg class="mx-auto h-12 w-12 text-gray-400 group-hover:text-blue-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        <p class="text-sm font-medium text-gray-300" id="splitFileDetails">
+                            Drag and drop your source PDF here, or <span class="text-blue-400">browse</span>
+                        </p>
+                        <p class="text-xs text-gray-500">Single .pdf file</p>
                     </div>
                 </div>
-                
-                <button type="button" id="addRangeBtn" class="mt-3 flex items-center text-sm text-blue-400 hover:text-blue-300 font-medium transition focus:outline-none">
-                    <span class="mr-1 text-lg font-bold">+</span> Add Another Spliced PDF Range
+
+                <div>
+                    <label class="block text-gray-300 text-sm font-semibold mb-2">Target Splicing Ranges</label>
+                    <div id="rangesContainer" class="space-y-3">
+                        <div class="flex items-center space-x-2">
+                            <input type="text" name="rangeInput" required placeholder="e.g. 1-4, 7, 10-12"
+                                   class="flex-1 bg-gray-700 text-white placeholder-gray-500 rounded-lg px-4 py-2.5 outline-none border border-gray-600 focus:border-blue-500 transition">
+                        </div>
+                    </div>
+                    <button type="button" id="addRangeBtn" class="mt-3 flex items-center text-sm text-blue-400 hover:text-blue-300 font-medium transition focus:outline-none">
+                        <span class="mr-1 text-lg font-bold">+</span> Add Another Spliced PDF Range
+                    </button>
+                </div>
+
+                <button type="submit" id="splitSubmitBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg py-3 transition shadow-lg shadow-blue-900/30 active:scale-[0.99] disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-3">
+                    <svg id="splitSpinner" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span id="splitBtnText">Compile & Download Package Bundle (.ZIP)</span>
                 </button>
-            </div>
+            </form>
+        </div>
 
-            <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg py-3 transition shadow-lg shadow-blue-900/30 active:scale-[0.99] disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-3">
-                <svg id="loadingSpinner" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span id="btnText">Compile & Download Package Bundle (.ZIP)</span>
-            </button>
-        </form>
+        <!-- MERGE PANEL -->
+        <div id="panel-merge" class="hidden">
+            <form id="mergeForm" class="space-y-6">
+                <div id="mergeDropZone" class="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center cursor-pointer hover:border-gray-500 transition group">
+                    <input type="file" id="mergeFileInput" accept="application/pdf" multiple class="hidden">
+                    <div class="space-y-2">
+                        <svg class="mx-auto h-12 w-12 text-gray-400 group-hover:text-blue-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        <p class="text-sm font-medium text-gray-300" id="mergeFileDetails">
+                            Drag and drop multiple PDFs here, or <span class="text-blue-400">browse</span>
+                        </p>
+                        <p class="text-xs text-gray-500">Select 2 or more .pdf files — merged in order selected</p>
+                    </div>
+                </div>
+
+                <!-- Selected files list -->
+                <div id="mergeFileList" class="space-y-2 hidden">
+                    <p class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Files to merge (in order)</p>
+                    <ul id="mergeFileItems" class="space-y-2"></ul>
+                </div>
+
+                <button type="submit" id="mergeSubmitBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg py-3 transition shadow-lg shadow-indigo-900/30 active:scale-[0.99] disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-3">
+                    <svg id="mergeSpinner" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span id="mergeBtnText">Merge & Download PDF</span>
+                </button>
+            </form>
+        </div>
+
     </div>
-
     <script src="app.js"></script>
 </body>
 </html>
