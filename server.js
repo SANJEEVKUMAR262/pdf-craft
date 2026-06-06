@@ -20,11 +20,11 @@ const upload = multer({ storage: storage });
 function parsePageRanges(rangeStr, maxPages) {
     const pages = [];
     const groups = rangeStr.split(',');
-    
+
     for (let group of groups) {
         group = group.trim();
         if (!group) continue;
-        
+
         if (group.includes('-')) {
             const [startStr, endStr] = group.split('-');
             const start = parseInt(startStr, 10);
@@ -44,12 +44,13 @@ function parsePageRanges(rangeStr, maxPages) {
     return pages;
 }
 
+// ── SPLIT endpoint (existing) ──────────────────────────────────────────────
 app.post('/api/splice', upload.single('pdfFile'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No PDF file uploaded.' });
         }
-        
+
         let ranges = req.body.ranges;
         if (!ranges) {
             return res.status(400).json({ error: 'No target page ranges specified.' });
@@ -60,7 +61,7 @@ app.post('/api/splice', upload.single('pdfFile'), async (req, res) => {
 
         const sourcePdfDoc = await PDFDocument.load(req.file.buffer);
         const totalPages = sourcePdfDoc.getPageCount();
-        
+
         const zip = new JSZip();
         let validFilesCount = 0;
 
@@ -74,7 +75,7 @@ app.post('/api/splice', upload.single('pdfFile'), async (req, res) => {
             const newPdfDoc = await PDFDocument.create();
             const copiedPages = await newPdfDoc.copyPages(sourcePdfDoc, targetPages);
             copiedPages.forEach((page) => newPdfDoc.addPage(page));
-            
+
             const pdfBytes = await newPdfDoc.save();
             zip.file(`spliced_part_${i + 1}.pdf`, pdfBytes);
             validFilesCount++;
@@ -85,7 +86,6 @@ app.post('/api/splice', upload.single('pdfFile'), async (req, res) => {
         }
 
         const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
-
         res.setHeader('Content-Type', 'application/zip');
         res.setHeader('Content-Disposition', 'attachment; filename="crafted_pdfs_package.zip"');
         res.send(zipBuffer);
@@ -93,6 +93,33 @@ app.post('/api/splice', upload.single('pdfFile'), async (req, res) => {
     } catch (error) {
         console.error('Pipeline compilation failure:', error);
         res.status(500).json({ error: 'An internal error occurred during multi-stage processing.' });
+    }
+});
+
+// ── MERGE endpoint (new) ───────────────────────────────────────────────────
+app.post('/api/merge', upload.array('pdfFiles'), async (req, res) => {
+    try {
+        if (!req.files || req.files.length < 2) {
+            return res.status(400).json({ error: 'Please upload at least 2 PDF files to merge.' });
+        }
+
+        const mergedDoc = await PDFDocument.create();
+
+        for (const file of req.files) {
+            const srcDoc = await PDFDocument.load(file.buffer);
+            const copiedPages = await mergedDoc.copyPages(srcDoc, srcDoc.getPageIndices());
+            copiedPages.forEach((page) => mergedDoc.addPage(page));
+        }
+
+        const mergedBytes = await mergedDoc.save();
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename="merged_output.pdf"');
+        res.send(Buffer.from(mergedBytes));
+
+    } catch (error) {
+        console.error('Merge failure:', error);
+        res.status(500).json({ error: 'An internal error occurred during merging.' });
     }
 });
 
