@@ -4,6 +4,7 @@ import { PDFDocument } from 'pdf-lib';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import JSZip from 'jszip';
+import compression from 'compression';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,11 +12,18 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+// Compress all responses
+app.use(compression());
 
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+app.use(express.json());
+
+// Cache static files for 1 day
+app.use(express.static(path.join(__dirname, 'public'), {
+    maxAge: '1d',
+    etag: true,
+}));
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 function parsePageRanges(rangeStr, maxPages) {
     const pages = [];
@@ -44,7 +52,7 @@ function parsePageRanges(rangeStr, maxPages) {
     return pages;
 }
 
-// ── SPLIT endpoint (existing) ──────────────────────────────────────────────
+// ── SPLIT endpoint ─────────────────────────────────────────────────────────
 app.post('/api/splice', upload.single('pdfFile'), async (req, res) => {
     try {
         if (!req.file) {
@@ -59,7 +67,7 @@ app.post('/api/splice', upload.single('pdfFile'), async (req, res) => {
             ranges = [ranges];
         }
 
-        const sourcePdfDoc = await PDFDocument.load(req.file.buffer);
+        const sourcePdfDoc = await PDFDocument.load(req.file.buffer, { ignoreEncryption: true });
         const totalPages = sourcePdfDoc.getPageCount();
 
         const zip = new JSZip();
@@ -85,18 +93,17 @@ app.post('/api/splice', upload.single('pdfFile'), async (req, res) => {
             return res.status(400).json({ error: 'None of the provided ranges matched your document page count.' });
         }
 
-        const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+        const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
         res.setHeader('Content-Type', 'application/zip');
         res.setHeader('Content-Disposition', 'attachment; filename="crafted_pdfs_package.zip"');
         res.send(zipBuffer);
 
     } catch (error) {
-        console.error('Pipeline compilation failure:', error);
-        res.status(500).json({ error: 'An internal error occurred during multi-stage processing.' });
+        console.error('Split error:', error);
+        res.status(500).json({ error: 'An internal error occurred during splitting.' });
     }
-});
 
-// ── MERGE endpoint (new) ───────────────────────────────────────────────────
+// ── MERGE endpoint ─────────────────────────────────────────────────────────
 app.post('/api/merge', upload.array('pdfFiles'), async (req, res) => {
     try {
         if (!req.files || req.files.length < 2) {
@@ -106,7 +113,7 @@ app.post('/api/merge', upload.array('pdfFiles'), async (req, res) => {
         const mergedDoc = await PDFDocument.create();
 
         for (const file of req.files) {
-            const srcDoc = await PDFDocument.load(file.buffer);
+            const srcDoc = await PDFDocument.load(file.buffer, { ignoreEncryption: true });
             const copiedPages = await mergedDoc.copyPages(srcDoc, srcDoc.getPageIndices());
             copiedPages.forEach((page) => mergedDoc.addPage(page));
         }
@@ -118,15 +125,12 @@ app.post('/api/merge', upload.array('pdfFiles'), async (req, res) => {
         res.send(Buffer.from(mergedBytes));
 
     } catch (error) {
-        console.error('Merge failure:', error);
+        console.error('Merge error:', error);
         res.status(500).json({ error: 'An internal error occurred during merging.' });
     }
-});
 
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
 
 app.listen(port, () => {
     console.log(`Server running smoothly on port ${port}`);
-});
